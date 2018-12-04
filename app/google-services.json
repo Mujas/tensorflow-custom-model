@@ -1,0 +1,104 @@
+{
+  "project_info": {
+    "project_number": "201793818892",
+    "firebase_url": "https://tf-model-29db5.firebaseio.com",
+    "project_id": "tf-model-29db5",
+    "storage_bucket": "tf-model-29db5.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:201793818892:android:7bde7db5dbf5af7f",
+        "android_client_info": {
+          "package_name": "android.example.com.tflitecamerademo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "201793818892-rrop7j7mma2ff5v7k4nggeqj484iqf42.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBX1BpsEkGHUvTu4V95q-T6UiPd2VtGF_A"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:201793818892:android:43f777b379de9ab3",
+        "android_client_info": {
+          "package_name": "com.example.android.tflitecamerademo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "201793818892-rrop7j7mma2ff5v7k4nggeqj484iqf42.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBX1BpsEkGHUvTu4V95q-T6UiPd2VtGF_A"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:201793818892:android:693c00b96c712e8c",
+        "android_client_info": {
+          "package_name": "com.google.firebase.codelab.mlkit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "201793818892-rrop7j7mma2ff5v7k4nggeqj484iqf42.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBX1BpsEkGHUvTu4V95q-T6UiPd2VtGF_A"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
