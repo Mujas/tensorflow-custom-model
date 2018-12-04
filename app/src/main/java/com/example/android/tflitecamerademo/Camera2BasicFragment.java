@@ -269,7 +269,7 @@ public class Camera2BasicFragment extends Fragment
                     new Runnable() {
                         @Override
                         public void run() {
-                            textView.setText("Label: "+text+ "\nBarcode: "+ mRawBarcodeValue);
+                            textView.setText("Label: " + text + "\nBarcode: " + mRawBarcodeValue);
                         }
                     });
         }
@@ -643,14 +643,27 @@ public class Camera2BasicFragment extends Fragment
                 }
             };
 
-    private void barcodeReader() {
+
+    /**
+     * Classifies a frame from the preview stream.
+     */
+    private void classifyFrame() {
         if (classifier == null || getActivity() == null || cameraDevice == null) {
             showToast("Uninitialized Classifier or invalid context.");
             return;
         }
-        Bitmap bitmap = textureView.getBitmap(1024, 720);
-        initBarcode(bitmap);
-        //bitmap.recycle();
+        Bitmap bitmap = textureView.getBitmap(ImageClassifier.DIM_IMG_SIZE_X, ImageClassifier.DIM_IMG_SIZE_Y);
+        String textToShow = classifier.classifyFrame(bitmap);
+        bitmap.recycle();
+        showToast(textToShow);
+    }
+
+    private void barcodeReader(){
+        if (classifier == null || getActivity() == null || cameraDevice == null) {
+            showToast("Uninitialized Classifier or invalid context.");
+            return;
+        }
+        initBarcode();
     }
 
     /**
@@ -746,21 +759,6 @@ public class Camera2BasicFragment extends Fragment
     }
 
     /**
-     * Classifies a frame from the preview stream.
-     */
-    private void classifyFrame() {
-        if (classifier == null || getActivity() == null || cameraDevice == null) {
-            showToast("Uninitialized Classifier or invalid context.");
-            return;
-        }
-        Bitmap bitmap = textureView.getBitmap(ImageClassifier.DIM_IMG_SIZE_X, ImageClassifier.DIM_IMG_SIZE_Y);
-        String textToShow = classifier.classifyFrame(bitmap);
-        //initBarcode(bitmap);
-        bitmap.recycle();
-        showToast(textToShow);
-    }
-
-    /**
      * Compares two {@code Size}s based on their areas.
      */
     private static class CompareSizesByArea implements Comparator<Size> {
@@ -801,10 +799,11 @@ public class Camera2BasicFragment extends Fragment
     }
 
 
-    private void initBarcode(Bitmap bitmap) {
+    private void initBarcode() {
 
+        //Bitmap bitmap = textureView.getBitmap(1024, 720);
         //saveImage(bitmap);
-        Bitmap bitmapl = BitmapFactory.decodeResource(getResources(), R.drawable.barcode);
+        //Bitmap bitmapl = BitmapFactory.decodeResource(getResources(), R.drawable.barcode);
         FirebaseVisionBarcodeDetectorOptions options =
                 new FirebaseVisionBarcodeDetectorOptions.Builder()
                         .setBarcodeFormats(
@@ -813,15 +812,24 @@ public class Camera2BasicFragment extends Fragment
 
         //Get access to an instance of FirebaseBarcodeDetector
         FirebaseVisionBarcodeDetector detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options);
-        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(bitmap);
+        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(textureView.getBitmap(1024, 720));
 
         Task<List<FirebaseVisionBarcode>> result = detector.detectInImage(image)
-                .addOnSuccessListener(barcodes -> readBarcodes(barcodes))
+                .addOnSuccessListener(barcodes -> {
+                    //bitmap.recycle();
+                    readBarcodes(barcodes);
+                })
                 .addOnFailureListener(e -> {
                     // Task failed with an exception
                     // ...
-                    mBitmap = null;
+                    //bitmap.recycle();
                 });
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void readBarcodes(List<FirebaseVisionBarcode> barcodes) {
@@ -855,10 +863,10 @@ public class Camera2BasicFragment extends Fragment
         myDir.mkdirs();
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String fname = "Barcode_"+ timeStamp +".jpg";
+        String fname = "Barcode_" + timeStamp + ".jpg";
 
         File file = new File(myDir, fname);
-        if (file.exists()) file.delete ();
+        if (file.exists()) file.delete();
         try {
             FileOutputStream out = new FileOutputStream(file);
             finalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);

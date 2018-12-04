@@ -63,12 +63,12 @@ public class ImageClassifier {
     /**
      * Name of the model file stored in Assets.
      */
-    private static final String MODEL_PATH = "label_optimized_graph.tflite";
+    private static final String MODEL_PATH = "label_optimized_graph_carrier.tflite";
 
     /**
      * Name of the label file stored in Assets.
      */
-    private static final String LABEL_PATH = "retrained_labels.txt";
+    private static final String LABEL_PATH = "retrained_labels_carrier.txt";
 
     /**
      * Number of results to show in the UI.
