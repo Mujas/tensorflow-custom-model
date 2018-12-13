@@ -22,12 +22,10 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -44,7 +42,6 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
@@ -70,16 +67,14 @@ import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode;
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetector;
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetectorOptions;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.text.FirebaseVisionText;
+import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -254,7 +249,8 @@ public class Camera2BasicFragment extends Fragment
                 }
             };
 
-    private Bitmap mBitmap = null;
+    private String mRecipientName = "";
+    private String mCarrierLabel = "";
 
 
     /**
@@ -269,7 +265,20 @@ public class Camera2BasicFragment extends Fragment
                     new Runnable() {
                         @Override
                         public void run() {
-                            textView.setText("Label: " + text + "\nBarcode: " + mRawBarcodeValue);
+                            textView.setText("Label: " + text + "\nBarcode: " + mRawBarcodeValue + "\nName: "+ mRecipientName);
+                        }
+                    });
+        }
+    }
+
+    private void showToast() {
+        final Activity activity = getActivity();
+        if (activity != null) {
+            activity.runOnUiThread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            textView.setText("Label: " + mCarrierLabel + "\nBarcode: " + mRawBarcodeValue + "\nName: "+ mRecipientName);
                         }
                     });
         }
@@ -653,9 +662,9 @@ public class Camera2BasicFragment extends Fragment
             return;
         }
         Bitmap bitmap = textureView.getBitmap(ImageClassifier.DIM_IMG_SIZE_X, ImageClassifier.DIM_IMG_SIZE_Y);
-        String textToShow = classifier.classifyFrame(bitmap);
+        mCarrierLabel = classifier.classifyFrame(bitmap);
         bitmap.recycle();
-        showToast(textToShow);
+        showToast(mCarrierLabel);
     }
 
     private void barcodeReader(){
@@ -825,8 +834,26 @@ public class Camera2BasicFragment extends Fragment
                     //bitmap.recycle();
                 });
 
+        FirebaseVisionTextRecognizer recognizer = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+        recognizer.processImage(image)
+                .addOnSuccessListener(
+                        new OnSuccessListener<FirebaseVisionText>() {
+                            @Override
+                            public void onSuccess(FirebaseVisionText texts) {
+                                processTextRecognitionResult(texts);
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                // Task failed with an exception
+                                e.printStackTrace();
+                            }
+                        });
+
         try {
-            Thread.sleep(1000);
+            Thread.sleep(500);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -856,25 +883,48 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
-    private void saveImage(Bitmap finalBitmap) {
+    private void processTextRecognitionResult(FirebaseVisionText texts) {
+        List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
+        if (blocks.size() == 0) {
+            return;
+        }
+        for (int i = 0; i < blocks.size(); i++) {
+            //String blockText = blocks.get(i).getText();
+            //Log.e(TAG,"**Block text**"+ blockText);
+            List<FirebaseVisionText.Line> lines = blocks.get(i).getLines();
+            for (int j = 0; j < lines.size(); j++) {
+                String LineText = lines.get(j).getText();
+                Log.e(TAG,"**Line Text**"+ LineText);
 
-        String root = Environment.getExternalStorageDirectory().toString();
-        File myDir = new File(root + "/saved_images");
-        myDir.mkdirs();
-
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String fname = "Barcode_" + timeStamp + ".jpg";
-
-        File file = new File(myDir, fname);
-        if (file.exists()) file.delete();
-        try {
-            FileOutputStream out = new FileOutputStream(file);
-            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
-            out.flush();
-            out.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+                if(mCarrierLabel.contains("Amazon")) {
+                    if (LineText.contains("Ship To")) {
+                        try {
+                            if (j != lines.size()-1 ) {
+                                mRecipientName = lines.get(j + 1).getText();
+                                showToast();
+                            }
+                        } catch (IndexOutOfBoundsException ae) {
+                            Log.e(TAG, "**Array**" + ae);
+                        }
+                    }
+                }else if(mCarrierLabel.contains("FedEx")){
+                    if (LineText.contains("From:")) {
+                        try {
+                            if (j != lines.size()-1) {
+                                mRecipientName = lines.get(j + 1).getText();
+                                showToast();
+                            }
+                        } catch (IndexOutOfBoundsException ae) {
+                            Log.e(TAG, "**Array**" + ae);
+                        }
+                    }
+                }
+                /*List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
+                for (int k = 0; k < elements.size(); k++) {
+                    //String wordText = elements.get(k).getText();
+                    //Log.e(TAG,"**Word Text**"+ wordText);
+                }*/
+            }
         }
     }
-
 }
