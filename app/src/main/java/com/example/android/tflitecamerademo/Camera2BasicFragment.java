@@ -1037,7 +1037,13 @@ public class Camera2BasicFragment extends Fragment
                 Log.e(TAG, "**Line Text**" + lineText);
                 //fetchRecipient(lineText, lines, finalJ);
 
+                //Add line text to Set to handle duplicate
                 recipientArray.add(lineText);
+
+                //Clear previous list data
+                recipientList.clear();
+
+                //Add set values to fresh list
                 recipientList.addAll(recipientArray);
                 mAdapter.notifyDataSetChanged();
 
