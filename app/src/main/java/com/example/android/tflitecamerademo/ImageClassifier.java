@@ -199,7 +199,7 @@ public class ImageClassifier {
     }
 
     /**
-     * Reads label list from Assets.
+     * Reads label recipientList from Assets.
      */
     private List<String> loadLabelList(Activity activity) throws IOException {
         List<String> labelList = new ArrayList<String>();
@@ -268,7 +268,7 @@ public class ImageClassifier {
             if (label.getValue() > .8) {
                 textToShow = String.format("%s: %4.2f", label.getKey(), label.getValue()) + textToShow;
             } else {
-                textToShow = "--";
+                textToShow = "";
             }
         }
         return textToShow;

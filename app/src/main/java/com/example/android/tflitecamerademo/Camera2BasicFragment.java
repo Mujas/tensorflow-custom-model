@@ -19,8 +19,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.Fragment;
+
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -44,20 +43,29 @@ import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
-import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.android.tflitecamerademo.overlay.GraphicOverlay;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -75,7 +83,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -83,7 +94,8 @@ import java.util.concurrent.TimeUnit;
  * Basic fragments for the Camera.
  */
 public class Camera2BasicFragment extends Fragment
-        implements FragmentCompat.OnRequestPermissionsResultCallback {
+        implements ActivityCompat.OnRequestPermissionsResultCallback,
+        TextToSpeech.OnInitListener {
 
     /**
      * Tag for the {@link Log}.
@@ -99,10 +111,11 @@ public class Camera2BasicFragment extends Fragment
     private final Object lock = new Object();
     private boolean runClassifier = false;
     private boolean checkedPermissions = false;
-    private TextView textView;
+    private TextView textCarrier, textBarcode, textRecipient;
     private ImageClassifier classifier;
-    private String mRawBarcodeValue = "";
-
+    private String mRawBarcodeValue = null;
+    private String mRecipientName = null;
+    private String mCarrierLabel = null;
     /**
      * Max preview width that is guaranteed by Camera2 API
      */
@@ -248,41 +261,82 @@ public class Camera2BasicFragment extends Fragment
                         @NonNull TotalCaptureResult result) {
                 }
             };
+    private TextToSpeech textToSpeech;
+    private GraphicOverlay graphicOverlay;
 
-    private String mRecipientName = "";
-    private String mCarrierLabel = "";
+    //ListView
+    private ListView mListView;
+    private Set<String> recipientArray = new HashSet<>();
+    private ArrayAdapter<String> mAdapter;
+    List<String> recipientList = new ArrayList<>();
+    private void playTTS() {
+        if (!TextUtils.isEmpty(mCarrierLabel) && !TextUtils.isEmpty(mRawBarcodeValue)) {
+            textToSpeech.speak("Focus on recipient name", TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+    }
 
+    private void initTTS() {
+        textToSpeech = new TextToSpeech(getActivity(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+            }
+        });
+    }
 
     /**
      * Shows a {@link Toast} on the UI thread for the classification results.
      *
-     * @param text The message to show
+     * @param carrierLabel The message to show
      */
-    private void showToast(final String text) {
+    private void showCarrier(String carrierLabel) {
+        if (!TextUtils.isEmpty(mCarrierLabel))
+            return;
+        mCarrierLabel = carrierLabel;
         final Activity activity = getActivity();
         if (activity != null) {
             activity.runOnUiThread(
                     new Runnable() {
                         @Override
                         public void run() {
-                            textView.setText("Label: " + text + "\nBarcode: " + mRawBarcodeValue + "\nName: "+ mRecipientName);
+                            textCarrier.setText(mCarrierLabel);
+                        }
+                    });
+        }
+
+        playTTS();
+    }
+
+    private void showBarcode(String barcodeValue) {
+        if (!TextUtils.isEmpty(mRawBarcodeValue))
+            return;
+        mRawBarcodeValue = barcodeValue;
+        final Activity activity = getActivity();
+        if (activity != null) {
+            activity.runOnUiThread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            textBarcode.setText(mRawBarcodeValue);
+                        }
+                    });
+        }
+        playTTS();
+    }
+
+    private void showRecipient(String recipientValue) {
+        mRecipientName = recipientValue;
+        final Activity activity = getActivity();
+        if (activity != null) {
+            activity.runOnUiThread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            textRecipient.setText(mRecipientName);
                         }
                     });
         }
     }
 
-    private void showToast() {
-        final Activity activity = getActivity();
-        if (activity != null) {
-            activity.runOnUiThread(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            textView.setText("Label: " + mCarrierLabel + "\nBarcode: " + mRawBarcodeValue + "\nName: "+ mRecipientName);
-                        }
-                    });
-        }
-    }
 
     /**
      * Resizes image.
@@ -296,7 +350,7 @@ public class Camera2BasicFragment extends Fragment
      * doesn't exist, choose the largest one that is at most as large as the respective max size, and
      * whose aspect ratio matches with the specified value.
      *
-     * @param choices           The list of sizes that the camera supports for the intended output class
+     * @param choices           The recipientList of sizes that the camera supports for the intended output class
      * @param textureViewWidth  The width of the texture view relative to sensor coordinate
      * @param textureViewHeight The height of the texture view relative to sensor coordinate
      * @param maxWidth          The maximum width that can be chosen
@@ -353,7 +407,39 @@ public class Camera2BasicFragment extends Fragment
     public View onCreateView(
             LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         FirebaseApp.initializeApp(getActivity());
+        setHasOptionsMenu(true);
+        initTTS();
         return inflater.inflate(R.layout.fragment_camera2_basic, container, false);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_main, menu);
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_reset:
+                resetFields();
+                break;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void resetFields() {
+        //clear views
+        textCarrier.setText("");
+        textBarcode.setText("");
+        textRecipient.setText("");
+
+        //clear strings
+        mRawBarcodeValue = "";
+        mRecipientName = "";
+        mCarrierLabel = "";
+        graphicOverlay.clear();
+        mListView.setVisibility(View.GONE);
     }
 
     /**
@@ -362,7 +448,13 @@ public class Camera2BasicFragment extends Fragment
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         textureView = (AutoFitTextureView) view.findViewById(R.id.texture);
-        textView = (TextView) view.findViewById(R.id.text);
+        textCarrier = (TextView) view.findViewById(R.id.textCarrier);
+        textBarcode = (TextView) view.findViewById(R.id.textBarcode);
+        textRecipient = (TextView) view.findViewById(R.id.textRecipient);
+        graphicOverlay = (GraphicOverlay) view.findViewById(R.id.fireFaceOverlay);
+        mListView = (ListView) view.findViewById(R.id.listRecipient);
+
+        initListViewAdapter();
     }
 
     /**
@@ -540,7 +632,7 @@ public class Camera2BasicFragment extends Fragment
      */
     private void openCamera(int width, int height) {
         if (!checkedPermissions && !allPermissionsGranted()) {
-            FragmentCompat.requestPermissions(this, getRequiredPermissions(), PERMISSIONS_REQUEST_CODE);
+            ActivityCompat.requestPermissions(getActivity(), getRequiredPermissions(), PERMISSIONS_REQUEST_CODE);
             return;
         } else {
             checkedPermissions = true;
@@ -658,21 +750,21 @@ public class Camera2BasicFragment extends Fragment
      */
     private void classifyFrame() {
         if (classifier == null || getActivity() == null || cameraDevice == null) {
-            showToast("Uninitialized Classifier or invalid context.");
+            //showBarcode("Uninitialized Classifier or invalid context.");
             return;
         }
         Bitmap bitmap = textureView.getBitmap(ImageClassifier.DIM_IMG_SIZE_X, ImageClassifier.DIM_IMG_SIZE_Y);
-        mCarrierLabel = classifier.classifyFrame(bitmap);
+        String carrier = classifier.classifyFrame(bitmap);
         bitmap.recycle();
-        showToast(mCarrierLabel);
+        showCarrier(carrier);
     }
 
-    private void barcodeReader(){
+    private void barcodeReader() {
         if (classifier == null || getActivity() == null || cameraDevice == null) {
-            showToast("Uninitialized Classifier or invalid context.");
+            //showBarcode("Uninitialized Classifier or invalid context.");
             return;
         }
-        initBarcode();
+        startBarcodeReader();
     }
 
     /**
@@ -724,7 +816,7 @@ public class Camera2BasicFragment extends Fragment
 
                         @Override
                         public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            showToast("Failed");
+                            showBarcode("Failed");
                         }
                     },
                     null);
@@ -765,6 +857,20 @@ public class Camera2BasicFragment extends Fragment
             matrix.postRotate(180, centerX, centerY);
         }
         textureView.setTransform(matrix);
+    }
+
+    @Override
+    public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+            int ttsLang = textToSpeech.setLanguage(Locale.US);
+            if (ttsLang == TextToSpeech.LANG_MISSING_DATA
+                    || ttsLang == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TTS", "The Language is not supported!");
+            } else {
+                Log.i("TTS", "Language Supported.");
+            }
+            Log.i("TTS", "Initialization success.");
+        }
     }
 
     /**
@@ -808,7 +914,7 @@ public class Camera2BasicFragment extends Fragment
     }
 
 
-    private void initBarcode() {
+    private void startBarcodeReader() {
 
         //Bitmap bitmap = textureView.getBitmap(1024, 720);
         //saveImage(bitmap);
@@ -834,6 +940,30 @@ public class Camera2BasicFragment extends Fragment
                     //bitmap.recycle();
                 });
 
+        if (!TextUtils.isEmpty(mCarrierLabel) && !TextUtils.isEmpty(mRawBarcodeValue)) {
+            startTextRecognizer();
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mListView.setVisibility(View.VISIBLE); }
+            });
+        }
+    }
+
+    private void initListViewAdapter() {
+        mAdapter = new ArrayAdapter<>(getActivity(),
+                android.R.layout.simple_list_item_1, android.R.id.text1, recipientList);
+        mListView.setAdapter(mAdapter);
+        mListView.setOnItemClickListener((parent, view, position, id) -> {
+            // ListView Clicked item value
+            String itemValue = (String) mListView.getItemAtPosition(position);
+            showRecipient(itemValue);
+        });
+    }
+
+    private void startTextRecognizer() {
+        //Text Recognizer start only after barcode and carrier fetched
+        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(textureView.getBitmap(1024, 720));
         FirebaseVisionTextRecognizer recognizer = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         recognizer.processImage(image)
                 .addOnSuccessListener(
@@ -864,11 +994,12 @@ public class Camera2BasicFragment extends Fragment
             //Rect bounds = barcode.getBoundingBox();
             //Point[] corners = barcode.getCornerPoints();
 
-            mRawBarcodeValue = barcode.getRawValue();
+            String barcodeValue = barcode.getRawValue();
             Log.e("**Barcode**", barcode.toString() + barcode.getDisplayValue());
+            showBarcode(barcodeValue);
 
            /* int valueType = barcode.getValueType();
-            // See API reference for complete list of supported types
+            // See API reference for complete recipientList of supported types
             switch (valueType) {
                 case FirebaseVisionBarcode.TYPE_WIFI:
                     String ssid = barcode.getWifi().getSsid();
@@ -883,48 +1014,77 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
-    private void processTextRecognitionResult(FirebaseVisionText texts) {
+    private boolean processTextRecognitionResult(FirebaseVisionText texts) {
         List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
         if (blocks.size() == 0) {
-            return;
+            return false;
         }
+
         for (int i = 0; i < blocks.size(); i++) {
+
             //String blockText = blocks.get(i).getText();
-            //Log.e(TAG,"**Block text**"+ blockText);
+            //Log.e(TAG, "**Block text**" + blockText);
+
             List<FirebaseVisionText.Line> lines = blocks.get(i).getLines();
             for (int j = 0; j < lines.size(); j++) {
-                String LineText = lines.get(j).getText();
-                Log.e(TAG,"**Line Text**"+ LineText);
 
-                if(mCarrierLabel.contains("Amazon")) {
-                    if (LineText.contains("Ship To")) {
-                        try {
-                            if (j != lines.size()-1 ) {
-                                mRecipientName = lines.get(j + 1).getText();
-                                showToast();
-                            }
-                        } catch (IndexOutOfBoundsException ae) {
-                            Log.e(TAG, "**Array**" + ae);
+                int finalJ = j;
+                //graphicOverlay.clear();
+                //GraphicOverlay.Graphic textGraphic = new TextGraphic(graphicOverlay, lines.get(finalJ));
+                //graphicOverlay.add(textGraphic);
+
+                String lineText = lines.get(finalJ).getText();
+                Log.e(TAG, "**Line Text**" + lineText);
+                //fetchRecipient(lineText, lines, finalJ);
+
+                recipientArray.add(lineText);
+                recipientList.addAll(recipientArray);
+                mAdapter.notifyDataSetChanged();
+
+               /* graphicOverlay.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        List<GraphicOverlay.Graphic> graphic = graphicOverlay.getGraphics();
+                        if (graphic.size() > 0) {
+                            String recipientName = ((TextGraphic) graphic.get(0)).text.getText();
+                            showRecipient(recipientName);
                         }
                     }
-                }else if(mCarrierLabel.contains("FedEx")){
-                    if (LineText.contains("From:")) {
-                        try {
-                            if (j != lines.size()-1) {
-                                mRecipientName = lines.get(j + 1).getText();
-                                showToast();
-                            }
-                        } catch (IndexOutOfBoundsException ae) {
-                            Log.e(TAG, "**Array**" + ae);
-                        }
-                    }
-                }
+                });*/
+
                 /*List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
                 for (int k = 0; k < elements.size(); k++) {
                     //String wordText = elements.get(k).getText();
                     //Log.e(TAG,"**Word Text**"+ wordText);
+
                 }*/
+            }
+        }
+
+        return false;
+    }
+
+    private void fetchRecipient(String lineText, List<FirebaseVisionText.Line> lines, int position) {
+        if (mCarrierLabel.contains("Amazon")) {
+            if (lineText.toLowerCase().contains("ship to:")) {
+                try {
+                    String recipientName = lines.get(position).getText();
+                    showRecipient(recipientName);
+                } catch (IndexOutOfBoundsException ae) {
+                    Log.e(TAG, "**Array**" + ae);
+                }
+            }
+        } else if (mCarrierLabel.contains("FedEx")) {
+            if (lineText.toLowerCase().contains("to:")) {
+                try {
+                    String recipientName = lines.get(position + 1).getText();
+                    showRecipient(recipientName);
+                } catch (IndexOutOfBoundsException ae) {
+                    Log.e(TAG, "**Array**" + ae);
+                }
             }
         }
     }
 }
+
+

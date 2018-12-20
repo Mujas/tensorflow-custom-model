@@ -16,4 +16,7 @@
 -->
 <resources>
     <color name="control_background">#cc4285f4</color>
+    <color name="colorPrimary">#4285f4</color>
+    <color name="colorPrimaryDark">#4285f4</color>
+    <color name="colorAccent">#4285f4</color>
 </resources>

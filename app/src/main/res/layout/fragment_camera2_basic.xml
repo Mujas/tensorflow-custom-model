@@ -20,27 +20,113 @@
     <com.example.android.tflitecamerademo.AutoFitTextureView
         android:id="@+id/texture"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="300dp"
+        android:layout_above="@+id/control"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true" />
 
-    <FrameLayout
+    <com.example.android.tflitecamerademo.overlay.GraphicOverlay
+        android:id="@+id/fireFaceOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true" />
+
+    <ListView
+        android:id="@+id/listRecipient"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:visibility="gone"
+        android:background="#FFFFFF"
+        android:layout_alignBottom="@+id/texture"
+        android:layout_alignParentStart="true"></ListView>
+
+    <RelativeLayout
         android:id="@+id/control"
         android:layout_width="match_parent"
-        android:layout_height="112dp"
-        android:layout_alignParentBottom="true"
+        android:layout_height="140dp"
         android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:gravity="center_vertical"
         android:background="@color/control_background">
 
-        <TextView android:id="@+id/text"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingLeft="10dp"
+        <TextView
+            android:id="@+id/textCarrierLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
             android:gravity="center_vertical"
+            android:paddingLeft="10dp"
+            android:text="Carrier :"
             android:textColor="#FFF"
-            android:textSize="20sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
-    </FrameLayout>
+        <TextView
+            android:id="@+id/textCarrier"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_toRightOf="@+id/textCarrierLabel"
+            android:gravity="center_vertical"
+            android:paddingLeft="10dp"
+            android:text=""
+            android:textColor="#FFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textBarcodeLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_below="@+id/textCarrierLabel"
+            android:gravity="center_vertical"
+            android:paddingLeft="10dp"
+            android:text="Barcode :"
+            android:textColor="#FFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+
+        <TextView
+            android:id="@+id/textBarcode"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_below="@+id/textCarrier"
+            android:layout_toRightOf="@+id/textBarcodeLabel"
+            android:gravity="center_vertical"
+            android:paddingLeft="10dp"
+            android:text=""
+            android:textColor="#FFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textRecipientLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_below="@+id/textBarcodeLabel"
+            android:gravity="center_vertical"
+            android:paddingLeft="10dp"
+            android:text="Name :"
+            android:textColor="#FFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textRecipient"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/textBarcode"
+            android:layout_alignBottom="@+id/textRecipientLabel"
+            android:layout_toRightOf="@+id/textRecipientLabel"
+            android:gravity="center_vertical"
+            android:maxLines="2"
+            android:paddingLeft="10dp"
+            android:text=""
+            android:textColor="#FFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+    </RelativeLayout>
 
 </RelativeLayout>
