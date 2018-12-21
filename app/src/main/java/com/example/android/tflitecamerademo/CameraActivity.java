@@ -8,19 +8,21 @@ import android.view.MenuItem;
 
 import com.google.firebase.FirebaseApp;
 
-/** Main {@code Activity} class for the Camera app. */
+/**
+ * Main {@code Activity} class for the Camera app.
+ */
 public class CameraActivity extends AppCompatActivity {
 
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    setContentView(R.layout.activity_camera);
-    FirebaseApp.initializeApp(this);
-    if (null == savedInstanceState) {
-      getSupportFragmentManager()
-          .beginTransaction()
-          .replace(R.id.container, Camera2BasicFragment.newInstance())
-          .commit();
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_camera);
+        FirebaseApp.initializeApp(this);
+        if (null == savedInstanceState) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.container, Camera2BasicFragment.newInstance())
+                    .commit();
+        }
     }
-  }
 }

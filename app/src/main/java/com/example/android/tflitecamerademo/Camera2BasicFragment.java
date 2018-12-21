@@ -66,6 +66,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.android.tflitecamerademo.overlay.GraphicOverlay;
+import com.example.android.tflitecamerademo.overlay.TextGraphic;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -269,6 +270,7 @@ public class Camera2BasicFragment extends Fragment
     private Set<String> recipientArray = new HashSet<>();
     private ArrayAdapter<String> mAdapter;
     List<String> recipientList = new ArrayList<>();
+
     private void playTTS() {
         if (!TextUtils.isEmpty(mCarrierLabel) && !TextUtils.isEmpty(mRawBarcodeValue)) {
             textToSpeech.speak("Focus on recipient name", TextToSpeech.QUEUE_FLUSH, null, null);
@@ -435,10 +437,12 @@ public class Camera2BasicFragment extends Fragment
         textRecipient.setText("");
 
         //clear strings
-        mRawBarcodeValue = "";
-        mRecipientName = "";
-        mCarrierLabel = "";
+        mRawBarcodeValue = null;
+        mRecipientName = null;
+        mCarrierLabel = null;
         graphicOverlay.clear();
+        recipientList.clear();
+        recipientArray.clear();
         mListView.setVisibility(View.GONE);
     }
 
@@ -945,7 +949,16 @@ public class Camera2BasicFragment extends Fragment
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    mListView.setVisibility(View.VISIBLE); }
+                    mListView.setVisibility(View.VISIBLE);
+                }
+            });
+        } else {
+            graphicOverlay.clear();
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mListView.setVisibility(View.GONE);
+                }
             });
         }
     }
@@ -1015,6 +1028,7 @@ public class Camera2BasicFragment extends Fragment
     }
 
     private boolean processTextRecognitionResult(FirebaseVisionText texts) {
+        graphicOverlay.clear();
         List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
         if (blocks.size() == 0) {
             return false;
@@ -1029,9 +1043,8 @@ public class Camera2BasicFragment extends Fragment
             for (int j = 0; j < lines.size(); j++) {
 
                 int finalJ = j;
-                //graphicOverlay.clear();
-                //GraphicOverlay.Graphic textGraphic = new TextGraphic(graphicOverlay, lines.get(finalJ));
-                //graphicOverlay.add(textGraphic);
+                GraphicOverlay.Graphic textGraphic = new TextGraphic(graphicOverlay, lines.get(finalJ));
+                graphicOverlay.add(textGraphic);
 
                 String lineText = lines.get(finalJ).getText();
                 Log.e(TAG, "**Line Text**" + lineText);
@@ -1058,12 +1071,11 @@ public class Camera2BasicFragment extends Fragment
                     }
                 });*/
 
-                /*List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
+                List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
                 for (int k = 0; k < elements.size(); k++) {
                     //String wordText = elements.get(k).getText();
                     //Log.e(TAG,"**Word Text**"+ wordText);
-
-                }*/
+                }
             }
         }
 
