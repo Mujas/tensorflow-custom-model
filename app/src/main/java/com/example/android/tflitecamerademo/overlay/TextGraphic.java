@@ -13,12 +13,16 @@
 // limitations under the License.
 package com.example.android.tflitecamerademo.overlay;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.text.TextUtils;
 
+import com.example.android.tflitecamerademo.R;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 
 
@@ -37,6 +41,9 @@ public class TextGraphic extends GraphicOverlay.Graphic {
     private Paint rectPaint;
     private Paint textPaint;
     private FirebaseVisionText.Line text;
+    private Bitmap mPointer;
+    private int mPointerWidth;
+    private int mPointerHeight;
 
     public TextGraphic(GraphicOverlay overlay, FirebaseVisionText.Line text) {
         super(overlay);
@@ -52,6 +59,10 @@ public class TextGraphic extends GraphicOverlay.Graphic {
     }
 
     private void init() {
+        mPointer = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                R.drawable.ic_bookmark);
+        mPointerWidth = mPointer.getWidth();
+        mPointerHeight = mPointer.getHeight();
         rectPaint = new Paint();
         rectPaint.setColor(TEXT_COLOR);
         rectPaint.setStyle(Paint.Style.STROKE);
@@ -87,9 +98,10 @@ public class TextGraphic extends GraphicOverlay.Graphic {
         rectF.top = translateY(rectF.top);
         rectF.right = translateX(rectF.right);
         rectF.bottom = translateY(rectF.bottom);
-        canvas.drawRect(rectF, rectPaint);
-
-        // Renders the text at the bottom of the box.
-        canvas.drawText(displaytext, rectF.left, rectF.bottom, textPaint);
+        if (!TextUtils.isEmpty(displaytext)) {
+            //canvas.drawRect(rectF, rectPaint);
+            canvas.drawBitmap(mPointer, rectF.left, rectF.top, null);
+            canvas.drawText(displaytext, (rectF.left + mPointerWidth), (rectF.top + mPointerHeight), textPaint);
+        }
     }
 }
