@@ -104,6 +104,7 @@ public class Camera2BasicFragment extends Fragment
     private static final String HANDLE_THREAD_NAME = "CameraBackground";
 
     private static final int PERMISSIONS_REQUEST_CODE = 1;
+    private static final long READ_DELAY = 2000;
 
     private final Object lock = new Object();
     private boolean runClassifier = false;
@@ -696,7 +697,7 @@ public class Camera2BasicFragment extends Fragment
         synchronized (lock) {
             runClassifier = true;
         }
-        backgroundHandler.postDelayed(periodicClassify, 3000);
+        backgroundHandler.postDelayed(periodicClassify, READ_DELAY);
     }
 
     /**
@@ -725,11 +726,11 @@ public class Camera2BasicFragment extends Fragment
                 public void run() {
                     synchronized (lock) {
                         if (runClassifier) {
-                            classifyFrame();
+                            //classifyFrame();
                             barcodeReader();
                         }
                     }
-                    backgroundHandler.postDelayed(periodicClassify, 3000);
+                    backgroundHandler.postDelayed(periodicClassify, READ_DELAY);
                 }
             };
 
