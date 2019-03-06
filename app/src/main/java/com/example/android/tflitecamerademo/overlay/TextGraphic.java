@@ -16,6 +16,7 @@ package com.example.android.tflitecamerademo.overlay;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
@@ -27,48 +28,68 @@ import com.google.firebase.ml.vision.text.FirebaseVisionText;
  */
 public class TextGraphic extends GraphicOverlay.Graphic {
 
-  private static final int TEXT_COLOR = Color.WHITE;
-  private static final float TEXT_SIZE = 54.0f;
-  private static final float STROKE_WIDTH = 4.0f;
+    private static final int TEXT_COLOR = Color.WHITE;
+    private static final float TEXT_SIZE = 54.0f;
+    private static final float STROKE_WIDTH = 4.0f;
+    private String displayValue;
+    private Rect rect;
 
-  private final Paint rectPaint;
-  private final Paint textPaint;
-  public final FirebaseVisionText.Line text;
+    private Paint rectPaint;
+    private Paint textPaint;
+    private FirebaseVisionText.Line text;
 
-  public TextGraphic(GraphicOverlay overlay, FirebaseVisionText.Line text) {
-    super(overlay);
-
-    this.text = text;
-
-    rectPaint = new Paint();
-    rectPaint.setColor(TEXT_COLOR);
-    rectPaint.setStyle(Paint.Style.STROKE);
-    rectPaint.setStrokeWidth(STROKE_WIDTH);
-
-
-    textPaint = new Paint();
-    textPaint.setColor(TEXT_COLOR);
-    textPaint.setTextSize(TEXT_SIZE);
-    // Redraw the overlay, as this graphic has been added.
-    postInvalidate();
-  }
-
-  /** Draws the text block annotations for position, size, and raw value on the supplied canvas. */
-  @Override
-  public void draw(Canvas canvas) {
-    if (text == null) {
-      throw new IllegalStateException("Attempting to draw a null text.");
+    public TextGraphic(GraphicOverlay overlay, FirebaseVisionText.Line text) {
+        super(overlay);
+        this.text = text;
+        init();
     }
 
-    // Draws the bounding box around the TextBlock.
-    RectF rect = new RectF(text.getBoundingBox());
-    rect.left = translateX(rect.left);
-    rect.top = translateY(rect.top);
-    rect.right = translateX(rect.right);
-    rect.bottom = translateY(rect.bottom);
-    canvas.drawRect(rect, rectPaint);
+    public TextGraphic(GraphicOverlay overlay, Rect rect, String displayValue) {
+        super(overlay);
+        this.rect = rect;
+        this.displayValue = displayValue;
+        init();
+    }
 
-    // Renders the text at the bottom of the box.
-    canvas.drawText(text.getText(), rect.left, rect.bottom, textPaint);
-  }
+    private void init() {
+        rectPaint = new Paint();
+        rectPaint.setColor(TEXT_COLOR);
+        rectPaint.setStyle(Paint.Style.STROKE);
+        rectPaint.setStrokeWidth(STROKE_WIDTH);
+
+        textPaint = new Paint();
+        textPaint.setColor(TEXT_COLOR);
+        textPaint.setTextSize(TEXT_SIZE);
+        // Redraw the overlay, as this graphic has been added.
+        postInvalidate();
+    }
+
+    /**
+     * Draws the text block annotations for position, size, and raw value on the supplied canvas.
+     */
+    @Override
+    public void draw(Canvas canvas) {
+        if (text == null && rect == null) {
+            throw new IllegalStateException("Attempting to draw a null text.");
+        }
+
+        // Draws the bounding box around the TextBlock.
+        RectF rectF;
+        String displaytext;
+        if (this.rect != null) {
+            rectF = new RectF(this.rect);
+            displaytext = displayValue;
+        } else {
+            rectF = new RectF(text.getBoundingBox());
+            displaytext = text.getText();
+        }
+        rectF.left = translateX(rectF.left);
+        rectF.top = translateY(rectF.top);
+        rectF.right = translateX(rectF.right);
+        rectF.bottom = translateY(rectF.bottom);
+        canvas.drawRect(rectF, rectPaint);
+
+        // Renders the text at the bottom of the box.
+        canvas.drawText(displaytext, rectF.left, rectF.bottom, textPaint);
+    }
 }
