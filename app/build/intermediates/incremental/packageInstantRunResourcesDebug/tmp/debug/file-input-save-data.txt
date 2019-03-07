@@ -1,0 +1,15 @@
+#Internal package file, do not edit.
+#Thu Dec 20 20:05:19 IST 2018
+1.base=C\:\\D-Drive\\Bit_Bucket\\tensorflow-custom\\app\\build\\intermediates\\merged_assets\\debug\\mergeDebugAssets\\out
+2.path=label_optimized_graph_carrier.tflite
+0.baseType=DIRECTORY
+2.base=C\:\\D-Drive\\Bit_Bucket\\tensorflow-custom\\app\\build\\intermediates\\merged_assets\\debug\\mergeDebugAssets\\out
+2.set=ASSET
+1.baseType=DIRECTORY
+count=3
+1.set=ASSET
+0.path=retrained_labels_carrier.txt
+0.set=ASSET
+0.base=C\:\\D-Drive\\Bit_Bucket\\tensorflow-custom\\app\\build\\intermediates\\merged_assets\\debug\\mergeDebugAssets\\out
+2.baseType=DIRECTORY
+1.path=BUILD

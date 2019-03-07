@@ -1,0 +1,4 @@
+#Thu Dec 20 20:05:27 IST 2018
+base.0=C\:\\D-Drive\\Bit_Bucket\\tensorflow-custom\\app\\build\\intermediates\\transforms\\dexMerger\\debug\\5
+path.0=classes.dex
+renamed.0=classes.dex
