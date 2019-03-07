@@ -19,8 +19,9 @@
 
     <com.example.android.tflitecamerademo.AutoFitTextureView
         android:id="@+id/texture"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="300dp"
+        android:layout_above="@+id/control"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true" />
 
@@ -38,8 +39,8 @@
         android:layout_height="150dp"
         android:visibility="gone"
         android:background="#FFFFFF"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentBottom="true"/>
+        android:layout_alignBottom="@+id/texture"
+        android:layout_alignParentStart="true"></ListView>
 
     <RelativeLayout
         android:id="@+id/control"
@@ -48,8 +49,7 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"
         android:gravity="center_vertical"
-        android:background="@color/control_background"
-        android:visibility="gone">
+        android:background="@color/control_background">
 
         <TextView
             android:id="@+id/textCarrierLabel"
