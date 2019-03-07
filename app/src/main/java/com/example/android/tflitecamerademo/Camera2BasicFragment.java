@@ -59,6 +59,8 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -79,7 +81,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -267,6 +268,7 @@ public class Camera2BasicFragment extends Fragment
     private Set<String> recipientArray = new LinkedHashSet<>();
     private ArrayAdapter<String> mAdapter;
     List<String> recipientList = new ArrayList<>();
+    private boolean isPanelShown = false;
 
     private void playTTS() {
         if (!TextUtils.isEmpty(mCarrierLabel) && !TextUtils.isEmpty(mRawBarcodeValue)) {
@@ -316,13 +318,23 @@ public class Camera2BasicFragment extends Fragment
         return newList;
     }
 
-    private void showRecipient(String recipientValue) {
+    private void showRecipient(final String recipientValue) {
         mRecipientName = recipientValue;
         final Activity activity = getActivity();
         if (activity != null) {
             activity.runOnUiThread(
-                    () -> textRecipient.setText(mRecipientName));
+                    () -> showDetailDialog(recipientValue));
         }
+    }
+
+    private void showDetailDialog(String value) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        builder.setTitle(value)
+                .setIcon(R.drawable.ic_bookmark)
+                .setMessage(R.string.details_dummy)
+                .setCancelable(true);
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
 
@@ -927,7 +939,7 @@ public class Camera2BasicFragment extends Fragment
                     // ...
                     //bitmap.recycle();
                 });
-        getActivity().runOnUiThread(() -> mListView.setVisibility(View.VISIBLE));
+        //getActivity().runOnUiThread(() -> mListView.setVisibility(View.VISIBLE));
     }
 
     private void initListViewAdapter() {
@@ -945,6 +957,9 @@ public class Camera2BasicFragment extends Fragment
 
     private void readBarcodes(List<FirebaseVisionBarcode> barcodes) {
         graphicOverlay.clear();
+        if (barcodes.size() > 0) {
+            showListView();
+        }
         for (FirebaseVisionBarcode barcode : barcodes) {
             //Rect bounds = barcode.getBoundingBox();
             //Point[] corners = barcode.getCornerPoints();
@@ -957,6 +972,19 @@ public class Camera2BasicFragment extends Fragment
             recipientArray.add(barcodeValue);
         }
         showBarcode();
+    }
+
+
+    private void showListView() {
+        if (!isPanelShown) {
+            // Show the panel
+            Animation bottomUp = AnimationUtils.loadAnimation(this.getContext(),
+                    R.anim.bottom_up);
+
+            mListView.startAnimation(bottomUp);
+            mListView.setVisibility(View.VISIBLE);
+            isPanelShown = true;
+        }
     }
 }
 

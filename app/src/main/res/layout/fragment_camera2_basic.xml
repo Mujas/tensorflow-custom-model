@@ -36,10 +36,10 @@
         android:id="@+id/listRecipient"
         android:layout_width="match_parent"
         android:layout_height="150dp"
-        android:visibility="visible"
+        android:visibility="gone"
         android:background="#FFFFFF"
-        android:layout_alignBottom="@+id/texture"
-        android:layout_alignParentStart="true"/>
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"/>
 
     <RelativeLayout
         android:id="@+id/control"
