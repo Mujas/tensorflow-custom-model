@@ -19,7 +19,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -60,6 +59,8 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -67,8 +68,6 @@ import android.widget.Toast;
 
 import com.example.android.tflitecamerademo.overlay.GraphicOverlay;
 import com.example.android.tflitecamerademo.overlay.TextGraphic;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ml.vision.FirebaseVision;
@@ -76,15 +75,13 @@ import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode;
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetector;
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetectorOptions;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
-import com.google.firebase.ml.vision.text.FirebaseVisionText;
-import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -108,6 +105,7 @@ public class Camera2BasicFragment extends Fragment
     private static final String HANDLE_THREAD_NAME = "CameraBackground";
 
     private static final int PERMISSIONS_REQUEST_CODE = 1;
+    private static final long READ_DELAY = 2000;
 
     private final Object lock = new Object();
     private boolean runClassifier = false;
@@ -267,9 +265,10 @@ public class Camera2BasicFragment extends Fragment
 
     //ListView
     private ListView mListView;
-    private Set<String> recipientArray = new HashSet<>();
+    private Set<String> recipientArray = new LinkedHashSet<>();
     private ArrayAdapter<String> mAdapter;
     List<String> recipientList = new ArrayList<>();
+    private boolean isPanelShown = false;
 
     private void playTTS() {
         if (!TextUtils.isEmpty(mCarrierLabel) && !TextUtils.isEmpty(mRawBarcodeValue)) {
@@ -297,46 +296,45 @@ public class Camera2BasicFragment extends Fragment
         final Activity activity = getActivity();
         if (activity != null) {
             activity.runOnUiThread(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            textCarrier.setText(mCarrierLabel);
-                        }
-                    });
+                    () -> textCarrier.setText(mCarrierLabel));
         }
 
-        playTTS();
+        //playTTS();
     }
 
-    private void showBarcode(String barcodeValue) {
-        if (!TextUtils.isEmpty(mRawBarcodeValue))
-            return;
-        mRawBarcodeValue = barcodeValue;
-        final Activity activity = getActivity();
+    private void showBarcode() {
+        Activity activity = getActivity();
         if (activity != null) {
-            activity.runOnUiThread(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            textBarcode.setText(mRawBarcodeValue);
-                        }
-                    });
+            activity.runOnUiThread(() -> {
+                recipientList.clear();
+                recipientList.addAll(getList());
+                mAdapter.notifyDataSetChanged();
+            });
         }
-        playTTS();
     }
 
-    private void showRecipient(String recipientValue) {
+    private List<String> getList() {
+        List<String> newList = new ArrayList<>(recipientArray);
+        return newList;
+    }
+
+    private void showRecipient(final String recipientValue) {
         mRecipientName = recipientValue;
         final Activity activity = getActivity();
         if (activity != null) {
             activity.runOnUiThread(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            textRecipient.setText(mRecipientName);
-                        }
-                    });
+                    () -> showDetailDialog(recipientValue));
         }
+    }
+
+    private void showDetailDialog(String value) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        builder.setTitle(value)
+                .setIcon(R.drawable.ic_bookmark)
+                .setMessage(R.string.details_dummy)
+                .setCancelable(true);
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
 
@@ -711,7 +709,7 @@ public class Camera2BasicFragment extends Fragment
         synchronized (lock) {
             runClassifier = true;
         }
-        backgroundHandler.post(periodicClassify);
+        backgroundHandler.postDelayed(periodicClassify, READ_DELAY);
     }
 
     /**
@@ -740,11 +738,11 @@ public class Camera2BasicFragment extends Fragment
                 public void run() {
                     synchronized (lock) {
                         if (runClassifier) {
-                            classifyFrame();
+                            //classifyFrame();
                             barcodeReader();
                         }
                     }
-                    backgroundHandler.post(periodicClassify);
+                    backgroundHandler.postDelayed(periodicClassify, READ_DELAY);
                 }
             };
 
@@ -820,7 +818,7 @@ public class Camera2BasicFragment extends Fragment
 
                         @Override
                         public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            showBarcode("Failed");
+                            showBarcode();
                         }
                     },
                     null);
@@ -931,176 +929,61 @@ public class Camera2BasicFragment extends Fragment
 
         //Get access to an instance of FirebaseBarcodeDetector
         FirebaseVisionBarcodeDetector detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options);
-        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(textureView.getBitmap(1024, 720));
+        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(textureView.getBitmap(1024, 1080));
 
+        //bitmap.recycle();
         Task<List<FirebaseVisionBarcode>> result = detector.detectInImage(image)
-                .addOnSuccessListener(barcodes -> {
-                    //bitmap.recycle();
-                    readBarcodes(barcodes);
-                })
+                .addOnSuccessListener(this::readBarcodes)
                 .addOnFailureListener(e -> {
                     // Task failed with an exception
                     // ...
                     //bitmap.recycle();
                 });
-
-        if (!TextUtils.isEmpty(mCarrierLabel) && !TextUtils.isEmpty(mRawBarcodeValue)) {
-            startTextRecognizer();
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mListView.setVisibility(View.VISIBLE);
-                }
-            });
-        } else {
-            graphicOverlay.clear();
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mListView.setVisibility(View.GONE);
-                }
-            });
-        }
+        //getActivity().runOnUiThread(() -> mListView.setVisibility(View.VISIBLE));
     }
 
     private void initListViewAdapter() {
-        mAdapter = new ArrayAdapter<>(getActivity(),
-                android.R.layout.simple_list_item_1, android.R.id.text1, recipientList);
-        mListView.setAdapter(mAdapter);
-        mListView.setOnItemClickListener((parent, view, position, id) -> {
-            // ListView Clicked item value
-            String itemValue = (String) mListView.getItemAtPosition(position);
-            showRecipient(itemValue);
-        });
-    }
-
-    private void startTextRecognizer() {
-        //Text Recognizer start only after barcode and carrier fetched
-        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(textureView.getBitmap(1024, 720));
-        FirebaseVisionTextRecognizer recognizer = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
-        recognizer.processImage(image)
-                .addOnSuccessListener(
-                        new OnSuccessListener<FirebaseVisionText>() {
-                            @Override
-                            public void onSuccess(FirebaseVisionText texts) {
-                                processTextRecognitionResult(texts);
-                            }
-                        })
-                .addOnFailureListener(
-                        new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                // Task failed with an exception
-                                e.printStackTrace();
-                            }
-                        });
-
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        if (getActivity() != null) {
+            mAdapter = new ArrayAdapter<String>(getActivity(),
+                    android.R.layout.simple_list_item_1, android.R.id.text1, recipientList);
+            mListView.setAdapter(mAdapter);
+            mListView.setOnItemClickListener((parent, view, position, id) -> {
+                // ListView Clicked item value
+                String itemValue = (String) mListView.getItemAtPosition(position);
+                showRecipient(itemValue);
+            });
         }
     }
 
     private void readBarcodes(List<FirebaseVisionBarcode> barcodes) {
+        graphicOverlay.clear();
+        if (barcodes.size() > 0) {
+            showListView();
+        }
         for (FirebaseVisionBarcode barcode : barcodes) {
             //Rect bounds = barcode.getBoundingBox();
             //Point[] corners = barcode.getCornerPoints();
 
             String barcodeValue = barcode.getRawValue();
             Log.e("**Barcode**", barcode.toString() + barcode.getDisplayValue());
-            showBarcode(barcodeValue);
-
-           /* int valueType = barcode.getValueType();
-            // See API reference for complete recipientList of supported types
-            switch (valueType) {
-                case FirebaseVisionBarcode.TYPE_WIFI:
-                    String ssid = barcode.getWifi().getSsid();
-                    String password = barcode.getWifi().getPassword();
-                    int type = barcode.getWifi().getEncryptionType();
-                    break;
-                case FirebaseVisionBarcode.TYPE_URL:
-                    String title = barcode.getUrl().getTitle();
-                    String url = barcode.getUrl().getUrl();
-                    break;
-            }*/
+            GraphicOverlay.Graphic textGraphic = new TextGraphic(graphicOverlay, barcode.getBoundingBox(),
+                    barcode.getDisplayValue());
+            graphicOverlay.add(textGraphic);
+            recipientArray.add(barcodeValue);
         }
+        showBarcode();
     }
 
-    private boolean processTextRecognitionResult(FirebaseVisionText texts) {
-        graphicOverlay.clear();
-        List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
-        if (blocks.size() == 0) {
-            return false;
-        }
 
-        for (int i = 0; i < blocks.size(); i++) {
+    private void showListView() {
+        if (!isPanelShown) {
+            // Show the panel
+            Animation bottomUp = AnimationUtils.loadAnimation(this.getContext(),
+                    R.anim.bottom_up);
 
-            //String blockText = blocks.get(i).getText();
-            //Log.e(TAG, "**Block text**" + blockText);
-
-            List<FirebaseVisionText.Line> lines = blocks.get(i).getLines();
-            for (int j = 0; j < lines.size(); j++) {
-
-                int finalJ = j;
-                GraphicOverlay.Graphic textGraphic = new TextGraphic(graphicOverlay, lines.get(finalJ));
-                graphicOverlay.add(textGraphic);
-
-                String lineText = lines.get(finalJ).getText();
-                Log.e(TAG, "**Line Text**" + lineText);
-                //fetchRecipient(lineText, lines, finalJ);
-
-                //Add line text to Set to handle duplicate
-                recipientArray.add(lineText);
-
-                //Clear previous list data
-                recipientList.clear();
-
-                //Add set values to fresh list
-                recipientList.addAll(recipientArray);
-                mAdapter.notifyDataSetChanged();
-
-               /* graphicOverlay.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        List<GraphicOverlay.Graphic> graphic = graphicOverlay.getGraphics();
-                        if (graphic.size() > 0) {
-                            String recipientName = ((TextGraphic) graphic.get(0)).text.getText();
-                            showRecipient(recipientName);
-                        }
-                    }
-                });*/
-
-                List<FirebaseVisionText.Element> elements = lines.get(j).getElements();
-                for (int k = 0; k < elements.size(); k++) {
-                    //String wordText = elements.get(k).getText();
-                    //Log.e(TAG,"**Word Text**"+ wordText);
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private void fetchRecipient(String lineText, List<FirebaseVisionText.Line> lines, int position) {
-        if (mCarrierLabel.contains("Amazon")) {
-            if (lineText.toLowerCase().contains("ship to:")) {
-                try {
-                    String recipientName = lines.get(position).getText();
-                    showRecipient(recipientName);
-                } catch (IndexOutOfBoundsException ae) {
-                    Log.e(TAG, "**Array**" + ae);
-                }
-            }
-        } else if (mCarrierLabel.contains("FedEx")) {
-            if (lineText.toLowerCase().contains("to:")) {
-                try {
-                    String recipientName = lines.get(position + 1).getText();
-                    showRecipient(recipientName);
-                } catch (IndexOutOfBoundsException ae) {
-                    Log.e(TAG, "**Array**" + ae);
-                }
-            }
+            mListView.startAnimation(bottomUp);
+            mListView.setVisibility(View.VISIBLE);
+            isPanelShown = true;
         }
     }
 }

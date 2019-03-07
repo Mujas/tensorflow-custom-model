@@ -22,4 +22,5 @@
     <string name="toggle_turn_off">NN:Off</string>
     <string name="toggle">Use NNAPI</string>
     <string name="reset">Reset</string>
+    <string name="details_dummy">Details goes here .!</string>
 </resources>
