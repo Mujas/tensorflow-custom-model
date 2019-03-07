@@ -59,7 +59,6 @@ public class TextGraphic extends GraphicOverlay.Graphic {
     }
 
     private void init() {
-
         mPointer = BitmapFactory.decodeResource(getApplicationContext().getResources(),
                 R.drawable.ic_bookmark);
         mPointerWidth = mPointer.getWidth();
