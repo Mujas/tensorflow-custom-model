@@ -52,6 +52,7 @@ public class AutoFitTextureView extends TextureView {
     mRatioWidth = width;
     mRatioHeight = height;
     requestLayout();
+
   }
 
   @Override
