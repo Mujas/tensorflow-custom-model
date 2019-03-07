@@ -408,7 +408,6 @@ public class Camera2BasicFragment extends Fragment
             LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         FirebaseApp.initializeApp(getActivity());
         setHasOptionsMenu(true);
-        initTTS();
         return inflater.inflate(R.layout.fragment_camera2_basic, container, false);
     }
 
