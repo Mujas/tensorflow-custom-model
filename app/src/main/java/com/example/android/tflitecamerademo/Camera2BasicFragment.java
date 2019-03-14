@@ -437,6 +437,7 @@ public class Camera2BasicFragment extends Fragment
         mRawBarcodeValue = null;
         mRecipientName = null;
         mCarrierLabel = null;
+        isPanelShown = false;
         graphicOverlay.clear();
         recipientList.clear();
         recipientArray.clear();
